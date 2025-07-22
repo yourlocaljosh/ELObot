@@ -1,3 +1,8 @@
+# DEVELOPED BY JOSHSW / KLISM
+# WE LOVE TABLE TENNIS!
+
+# Originally designed for Ping Pong Masters Tour, a local table tennis league in Novi, MI
+
 import discord
 import asyncio
 from discord import app_commands
