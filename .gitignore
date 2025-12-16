@@ -1,3 +1,9 @@
+# API
+.env
+
+# Python venv
 venv
+
+# Player Data
 data.json
 doubles_data.json
