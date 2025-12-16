@@ -3,9 +3,11 @@
 
 # Originally designed for Ping Pong Masters Tour, a local table tennis league in Novi, MI
 
+import os
 import discord
 import asyncio
 from discord import app_commands
+from dotenv import load_dotenv
 import io
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -17,7 +19,12 @@ from typing import Literal, Optional
 
 import doubles_elo as dE
 
-ALLOWED_ROLE_IDS = {1387183544937222326}
+load_dotenv()
+
+botToken = os.getenv("DISCORD_TOKEN")
+ALLOWED_ROLE_IDS = os.getenv("ROLE_ID")
+DEV_GUILD_ID = os.getenv("SERVER_ID")
+ELO_RANKS = os.getenv("RANKS","0")=="1"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -25,7 +32,6 @@ intents.members = True
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-botToken = "INSERT_KEY"
 
 @client.event
 async def on_message(message: discord.Message):
@@ -61,20 +67,22 @@ async def stats(interaction: discord.Interaction, user: discord.Member = None):
     user_stats.setdefault('peak_elo', user_stats['elo'])
     elo = user_stats['elo']
     peak = user_stats['peak_elo']
-        
-    if   elo >= 300: badge_emoji, badge_name = custom("goats"),    "GOATs"
-    elif elo >= 250: badge_emoji, badge_name = custom("master"),   "Master"
-    elif elo >= 200: badge_emoji, badge_name = custom("diamond"),  "Diamond"
-    elif elo >= 150: badge_emoji, badge_name = custom("platinum"), "Platinum"
-    elif elo >= 100: badge_emoji, badge_name = custom("gold"),     "Gold"
-    elif elo >=  80: badge_emoji, badge_name = custom("silver"),   "Silver"
-    elif elo >=  60: badge_emoji, badge_name = custom("bronze"),   "Bronze"
-    elif elo >=  40: badge_emoji, badge_name = custom("iron"),     "Iron"
-    else:            
-        badge_emoji, badge_name = custom("beginner"), "Beginner"
+    badge_part = ""
+    if ELO_RANKS:
+        if   elo >= 300: badge_emoji, badge_name = custom("goats"),    "GOATs"
+        elif elo >= 250: badge_emoji, badge_name = custom("master"),   "Master"
+        elif elo >= 200: badge_emoji, badge_name = custom("diamond"),  "Diamond"
+        elif elo >= 150: badge_emoji, badge_name = custom("platinum"), "Platinum"
+        elif elo >= 100: badge_emoji, badge_name = custom("gold"),     "Gold"
+        elif elo >=  80: badge_emoji, badge_name = custom("silver"),   "Silver"
+        elif elo >=  60: badge_emoji, badge_name = custom("bronze"),   "Bronze"
+        elif elo >=  40: badge_emoji, badge_name = custom("iron"),     "Iron"
+        else:            badge_emoji, badge_name = custom("beginner"), "Beginner"
+
+        badge_part = f" | {badge_emoji} ({badge_name})"
         
     msg = (
-        f"**{user.display_name} | #{rank_number} | {badge_emoji} ({badge_name})**\n"
+        f"**{user.display_name} | #{rank_number}{badge_part}**\n"
         f"> ELO: {elo}\n"
 		f"> Peak ELO: {peak}\n"
         f"> Wins: {user_stats['wins']}\n"
@@ -802,7 +810,6 @@ async def dmodify(
 async def on_ready():
     print(f"Logged in as {client.user}")
     await client.wait_until_ready()
-    DEV_GUILD_ID=1383627562063761418
     try:
         synced_guild=await tree.sync(guild=discord.Object(id=DEV_GUILD_ID))
         print(f"Synced {len(synced_guild)} commands to guild {DEV_GUILD_ID}")
