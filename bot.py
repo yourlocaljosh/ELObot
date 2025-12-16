@@ -106,7 +106,7 @@ async def stats(interaction: discord.Interaction, user: discord.Member = None):
         neighbor_lines.append(f"{idx + 2}. {below_user.display_name} — {below_stats['elo']}")
 
     embed.add_field(
-        name="Nearby Rankings",
+        name="Leaderboard",
         value="\n".join(neighbor_lines),
         inline=False
     )
