@@ -59,7 +59,7 @@ async def stats(interaction: discord.Interaction, user: discord.Member = None):
         return str(emoji) if emoji else ""
 
     ranked = sorted(data.items(), key=lambda x: x[1]['elo'], reverse=True)
-    idx    = next((i for i,(uid,_) in enumerate(ranked) if int(uid)==user.id), None)
+    idx = next((i for i, (uid, _) in enumerate(ranked) if int(uid) == user.id), None)
     if idx is None:
         return await interaction.response.send_message("Could not find your ranking.")
     rank_number = idx + 1
@@ -67,7 +67,10 @@ async def stats(interaction: discord.Interaction, user: discord.Member = None):
     user_stats.setdefault('peak_elo', user_stats['elo'])
     elo = user_stats['elo']
     peak = user_stats['peak_elo']
+
     badge_part = ""
+    badge_emoji = ""
+    badge_name = ""
     if ELO_RANKS:
         if   elo >= 300: badge_emoji, badge_name = custom("goats"),    "GOATs"
         elif elo >= 250: badge_emoji, badge_name = custom("master"),   "Master"
@@ -78,42 +81,48 @@ async def stats(interaction: discord.Interaction, user: discord.Member = None):
         elif elo >=  60: badge_emoji, badge_name = custom("bronze"),   "Bronze"
         elif elo >=  40: badge_emoji, badge_name = custom("iron"),     "Iron"
         else:            badge_emoji, badge_name = custom("beginner"), "Beginner"
+        badge_part = f" • {badge_emoji} {badge_name}".strip()
 
-        badge_part = f" | {badge_emoji} ({badge_name})"
-        
-    msg = (
-        f"**{user.display_name} | #{rank_number}{badge_part}**\n"
-        f"> ELO: {elo}\n"
-		f"> Peak ELO: {peak}\n"
-        f"> Wins: {user_stats['wins']}\n"
-        f"> Losses: {user_stats['losses']}\n"
-        f"> Current Streak: {user_stats['streak']}\n"
-        f"> Total ELO Gained: {user_stats.get('all_time_gain',0)}\n"
-        f"> Total ELO Lost:   {user_stats.get('all_time_loss',0)}\n\n"
+    title = f"{user.display_name} — #{rank_number}{badge_part}"
+    embed = discord.Embed(title=title)
+
+    embed.add_field(name="ELO", value=str(elo), inline=True)
+    embed.add_field(name="Peak", value=str(peak), inline=True)
+    embed.add_field(name="Record", value=f"{user_stats['wins']}W - {user_stats['losses']}L", inline=True)
+
+    embed.add_field(name="Streak", value=str(user_stats['streak']), inline=True)
+    embed.add_field(name="All-time Gain", value=str(user_stats.get('all_time_gain', 0)), inline=True)
+    embed.add_field(name="All-time Lost", value=str(user_stats.get('all_time_loss', 0)), inline=True)
+
+    neighbor_lines = []
+    if idx > 0:
+        above_id, above_stats = ranked[idx - 1]
+        above_user = await interaction.client.fetch_user(int(above_id))
+        neighbor_lines.append(f"{idx}. {above_user.display_name} — {above_stats['elo']}")
+    neighbor_lines.append(f"**{rank_number}. {user.display_name} — {elo}**")
+    if idx < len(ranked) - 1:
+        below_id, below_stats = ranked[idx + 1]
+        below_user = await interaction.client.fetch_user(int(below_id))
+        neighbor_lines.append(f"{idx + 2}. {below_user.display_name} — {below_stats['elo']}")
+
+    embed.add_field(
+        name="Nearby Rankings",
+        value="\n".join(neighbor_lines),
+        inline=False
     )
 
-    if idx > 0:
-        above_id, above_stats = ranked[idx-1]
-        above_user = await interaction.client.fetch_user(int(above_id))
-        msg += f"{idx}. {above_user.display_name} - {above_stats['elo']} ELO\n"
-
-    msg += f"**{rank_number}. {user.display_name} - {elo} ELO**"
-
-    if idx < len(ranked)-1:
-        below_id, below_stats = ranked[idx+1]
-        below_user = await interaction.client.fetch_user(int(below_id))
-        msg += f"{idx+2}. {below_user.display_name} - {below_stats['elo']} ELO\n"
-
-    msg += "\n**Medals:**\n"
     medals = user_stats.get('medals', [])
     if medals:
-        emoji_map = {'gold':'🏆','silver':'🥈','third':'🥉'}
-        for m in medals:
-            msg += f"{emoji_map[m['medal']]} {m['title']}\n"
+        emoji_map = {'gold': '🏆', 'silver': '🥈', 'third': '🥉'}
+        medals_text = "\n".join(f"{emoji_map.get(m['medal'], '🏅')} {m['title']}" for m in medals)
     else:
-        msg += "No medals yet."
+        medals_text = "No medals yet."
 
-    await interaction.response.send_message(msg)
+    embed.add_field(name="Medals", value=medals_text, inline=False)
+
+    embed.set_thumbnail(url=user.display_avatar.url)
+
+    await interaction.response.send_message(embed=embed)
 
 
 
